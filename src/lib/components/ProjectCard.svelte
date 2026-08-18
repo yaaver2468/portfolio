@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Arrow from "$lib/assets/arrow.svg?component";
 	interface Project {
 		title: string;
 		date: string;
@@ -7,38 +8,66 @@
 		languages: string;
 		link?: string;
 	}
-
 	interface Props {
 		project: Project;
 		colorDict: Record<string, string>;
 	}
-
 	let { project, colorDict }: Props = $props();
+
+	const DESCRIPTION_LIMIT = 40;
+	let expanded = $state(false);
+
+	let isLongDescription = $derived(project.description.length > DESCRIPTION_LIMIT);
+	let displayedDescription = $derived(
+		expanded || !isLongDescription
+			? project.description.replaceAll("\n", "<br/>")
+			: project.description.slice(0, DESCRIPTION_LIMIT).trimEnd() + "…"
+	);
+
+	function toggleExpanded(e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		expanded = !expanded;
+	}
 </script>
 
 <div class="project-card" class:no-link={!project.link}>
 	{#if project.link}
-		<a href={project.link} title="Checkout this project" class="card-link"></a>
+		<a href={project.link} title="Checkout this project" class="card-link" target="_blank"></a>
 	{/if}
 	<div class="header">
 		<h2 class="title">{project.title}</h2>
 		<span class="date">{project.date}</span>
 	</div>
-
 	<div class="image-container">
 		<img src={project.image} alt={project.title} />
 	</div>
-
 	<div class="content">
 		<section class="description">
-			<p>{project.description}</p>
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<p
+				class:clickable={isLongDescription}
+				onclick={isLongDescription ? toggleExpanded : undefined}
+			>{@html displayedDescription}</p>
+			{#if isLongDescription}
+				<button
+					type="button"
+					class="expand-toggle"
+					class:expanded
+					onclick={toggleExpanded}
+					aria-expanded={expanded}
+					aria-label={expanded ? "Show less" : "Show more"}
+				>
+					<Arrow />
+				</button>
+			{/if}
 		</section>
-
 		<section class="languages-container">
-			{#each project.languages.split(', ') as lang}
+			{#each project.languages.split(",") as lang}
 				{@const langName = lang.trim()}
-				{@const dotColor = colorDict[langName] || '#ffffff'}
-				<div class="lang-tag" style="--dot-color: {dotColor}">
+				{@const dotColor = colorDict[langName] || "var(--global-white)"}
+				<div class="blip-tag" style="--dot-color: {dotColor}">
 					<span class="dot"></span>
 					<span class="lang-text">{langName}</span>
 				</div>
@@ -51,12 +80,12 @@
 	.project-card {
 		display: flex;
 		flex-direction: column;
-		background-color: #3a3a3a;
+		background-color: rgba(58, 58, 58, 0.6);
 		border-radius: 0.75rem;
 		overflow: hidden;
 		position: relative;
 		transition: transform 0.2s ease-in-out;
-		box-shadow: 0 6px 12px -4px rgba(38, 38, 38, 0.8);
+		box-shadow: 0 6px 12px -4px color-mix(in srgb, var(--global-white) 20%, transparent);
 		z-index: 1;
 	}
 
@@ -88,12 +117,11 @@
 		margin: 0;
 		font-size: 1.25rem;
 		font-weight: bold;
-		color: #ffffff;
 	}
-
 	.date {
 		font-size: 0.875rem;
-		color: #aaa;
+		color: color-mix(in srgb, var(--global-white) 60%, transparent);
+		min-width: 64px;
 	}
 
 	.image-container {
@@ -116,10 +144,45 @@
 	}
 
 	.description {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
 		margin: 0;
 		font-size: 1rem;
 		line-height: 1.4;
-		color: #e0e0e0;
+	}
+
+	.description p.clickable {
+		cursor: pointer;
+	}
+
+	.expand-toggle :global {
+		align-self: flex-start;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: none;
+		border: none;
+		color: var(--global-white);
+		cursor: pointer;
+		padding: 0.25rem;
+		border-radius: 50%;
+		transition: background-color 0.2s ease;
+		svg {
+			transition: transform 0.2s ease;
+		}
+	}
+
+	.expand-toggle:hover {
+		background-color: color-mix(in srgb, var(--global-white) 15%, transparent);
+	}
+
+	.expand-toggle.expanded :global {
+		svg {
+			transform: rotate(180deg);
+		}
 	}
 
 	.languages-container {
@@ -127,32 +190,5 @@
 		flex-wrap: wrap;
 		gap: 0.5rem;
 		z-index: 2;
-	}
-
-	.lang-tag {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.3rem 0.7rem;
-		background-color: #4a4a4a;
-		border-radius: 2rem;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-		transition: box-shadow 0.2s ease;
-	}
-
-	.lang-tag:hover {
-		box-shadow: inset 0 0 8px var(--dot-color);
-	}
-
-	.dot {
-		width: 8px;
-		height: 8px;
-		background-color: var(--dot-color);
-		border-radius: 50%;
-		box-shadow: 0 0 5px var(--dot-color);
-	}
-
-	.lang-text {
-		color: #ffffff;
 	}
 </style>

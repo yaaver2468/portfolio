@@ -1,7 +1,25 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount } from "svelte";
 
 	let canvas: HTMLCanvasElement;
+
+	const CONFIG = {
+		targetFps: 60,
+		lifetimeFrames: 5, // line fades out over this many "frames" worth of time
+		burstMin: 2,
+		burstMax: 4,
+		maxLines: 10, // hard cap on simultaneous lines
+		endpointOffsetMin: 10, // how far the line's tip sits from the pointer, min/max px
+		endpointOffsetMax: 50,
+		strokeStyle: "rgba(255, 255, 255, 0.2)",
+		lineWidth: 1,
+		maxOpacity: 0.5,
+		resizeDebounceMs: 150,
+		maxDpr: 2
+	};
+	const SPAWN_INTERVAL_MS = 1000 / CONFIG.targetFps;
+	const LIFETIME_MS = SPAWN_INTERVAL_MS * CONFIG.lifetimeFrames;
+
 	let pointerX = 0;
 	let pointerY = 0;
 	let hasPosition = false;
@@ -15,12 +33,6 @@
 	}
 	let lines: Line[] = [];
 
-	const LIFETIME_MS = 150; // each line fully fades within this window
-	const SPAWN_INTERVAL_MS = 100; // how often a new burst fires
-	const MIN_PER_BURST = 5;
-	const MAX_PER_BURST = 10;
-	const SAFETY_CAP = 10; // hard cap on number of lines drawn
-
 	function randomEdgePoint(width: number, height: number) {
 		const edge = Math.floor(Math.random() * 4);
 		switch (edge) {
@@ -31,81 +43,98 @@
 		}
 	}
 
-	onMount(() => {
-		const ctx = canvas.getContext('2d', { alpha: true });
-		if (!ctx) return;
+	function computeEndpoint(originX: number, originY: number) {
+		const dx = originX - pointerX;
+		const dy = originY - pointerY;
+		const distance = Math.hypot(dx, dy);
 
-		let dpr = Math.min(window.devicePixelRatio || 1, 2);
+		const offsetDistance =
+			CONFIG.endpointOffsetMin +
+			Math.random() * (CONFIG.endpointOffsetMax - CONFIG.endpointOffsetMin);
 
+		return {
+			x: pointerX + (dx / distance) * offsetDistance,
+			y: pointerY + (dy / distance) * offsetDistance
+		};
+	}
+
+	function createLine(width: number, height: number, now: number): Line {
+		const origin = randomEdgePoint(width, height);
+		const endpoint = computeEndpoint(origin.x, origin.y);
+		return { x1: origin.x, y1: origin.y, x2: endpoint.x, y2: endpoint.y, bornAt: now };
+	}
+
+	function spawnBurst(width: number, height: number, now: number) {
+		if (!hasPosition) return;
+		const count = CONFIG.burstMin + Math.floor(Math.random() * (CONFIG.burstMax - CONFIG.burstMin + 1));
+		for (let i = 0; i < count; i++) {
+			if (lines.length >= CONFIG.maxLines) break;
+			lines.push(createLine(width, height, now));
+		}
+	}
+
+	function opacityForAge(age: number) {
+		return (1 - age / LIFETIME_MS) * CONFIG.maxOpacity;
+	}
+
+	function drawLine(ctx: CanvasRenderingContext2D, line: Line, age: number) {
+		ctx.globalAlpha = opacityForAge(age);
+		ctx.beginPath();
+		ctx.moveTo(line.x1, line.y1);
+		ctx.lineTo(line.x2, line.y2);
+		ctx.stroke();
+	}
+	
+	function updateAndDrawLines(ctx: CanvasRenderingContext2D, now: number) {
+		let writeIndex = 0;
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			const age = now - line.bornAt;
+			if (age >= LIFETIME_MS) continue; // dead, drop it
+
+			drawLine(ctx, line, age);
+			lines[writeIndex++] = line;
+		}
+		lines.length = writeIndex;
+	}
+
+	function trackMouse(e: MouseEvent) {
+		pointerX = e.clientX;
+		pointerY = e.clientY;
+		hasPosition = true;
+	}
+
+	function trackTouch(e: TouchEvent) {
+		const touch = e.touches[0] ?? e.changedTouches[0];
+		if (touch) {
+			pointerX = touch.clientX;
+			pointerY = touch.clientY;
+			hasPosition = true;
+		}
+	}
+	
+	function makeResizeHandler(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, dpr: number) {
 		const resize = () => {
 			canvas.width = window.innerWidth * dpr;
 			canvas.height = window.innerHeight * dpr;
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		};
 		let resizeTimeout: number;
-		const handleResize = () => {
+		const debouncedResize = () => {
 			clearTimeout(resizeTimeout);
-			resizeTimeout = window.setTimeout(resize, 150);
+			resizeTimeout = window.setTimeout(resize, CONFIG.resizeDebounceMs);
 		};
-		window.addEventListener('resize', handleResize);
-		resize();
+		return { resize, debouncedResize, clearPending: () => clearTimeout(resizeTimeout) };
+	}
 
-		const handleMouseMove = (e: MouseEvent) => {
-			pointerX = e.clientX;
-			pointerY = e.clientY;
-			hasPosition = true;
-		};
-		window.addEventListener('mousemove', handleMouseMove, { passive: true });
-
-		const handleTouch = (e: TouchEvent) => {
-			const touch = e.touches[0] ?? e.changedTouches[0];
-			if (touch) {
-				pointerX = touch.clientX;
-				pointerY = touch.clientY;
-				hasPosition = true;
-			}
-		};
-		window.addEventListener('touchstart', handleTouch, { passive: true });
-		window.addEventListener('touchmove', handleTouch, { passive: true });
-
-		const spawnBurst = (width: number, height: number, now: number) => {
-			if (!hasPosition) return;
-			const count = MIN_PER_BURST + Math.floor(Math.random() * (MAX_PER_BURST - MIN_PER_BURST + 1));
-			for (let i = 0; i < count; i++) {
-				if (lines.length >= SAFETY_CAP) break;
-				const { x, y } = randomEdgePoint(width, height);
-				const MIN_OFFSET = 10;
-				const MAX_OFFSET = 50;
-
-				const dx = x - pointerX;
-				const dy = y - pointerY;
-				const distance = Math.hypot(dx, dy);
-
-				const offsetDistance =
-					MIN_OFFSET + Math.random() * (MAX_OFFSET - MIN_OFFSET);
-
-				const offsetX = (dx / distance) * offsetDistance;
-				const offsetY = (dy / distance) * offsetDistance;
-
-				lines.push({
-					x1: x,
-					y1: y,
-					x2: pointerX + offsetX,
-					y2: pointerY + offsetY,
-					bornAt: now
-				});
-			}
-		};
-
-		const TARGET_FPS = 30;
-		const FRAME_MS = 1000 / TARGET_FPS;
+	function makeDrawLoop(ctx: CanvasRenderingContext2D) {
 		let lastFrameTime = 0;
 		let spawnAccumulator = 0;
 		let rafId: number;
 
-		const draw = (now: number) => {
-			rafId = requestAnimationFrame(draw);
-			if (now - lastFrameTime < FRAME_MS) return;
+		const frame = (now: number) => {
+			rafId = requestAnimationFrame(frame);
+			if (now - lastFrameTime < SPAWN_INTERVAL_MS) return;
 			const dt = now - lastFrameTime;
 			lastFrameTime = now;
 
@@ -119,35 +148,40 @@
 			}
 
 			ctx.clearRect(0, 0, width, height);
-			ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-			ctx.lineWidth = 1;
-
-			let writeIndex = 0;
-			for (let i = 0; i < lines.length; i++) {
-				const line = lines[i];
-				const age = now - line.bornAt;
-				if (age >= LIFETIME_MS) continue; // dead, drop it
-
-				const opacity = (1 - age / LIFETIME_MS) * 0.5;
-				ctx.globalAlpha = opacity;
-				ctx.beginPath();
-				ctx.moveTo(line.x1, line.y1);
-				ctx.lineTo(line.x2, line.y2); // frozen at spawn, this line never moves again
-				ctx.stroke();
-
-				lines[writeIndex++] = line;
-			}
-			lines.length = writeIndex;
+			ctx.strokeStyle = CONFIG.strokeStyle;
+			ctx.lineWidth = CONFIG.lineWidth;
+			updateAndDrawLines(ctx, now);
 		};
-		rafId = requestAnimationFrame(draw);
+
+		return {
+			start: () => (rafId = requestAnimationFrame(frame)),
+			stop: () => cancelAnimationFrame(rafId)
+		};
+	}
+
+	onMount(() => {
+		const ctx = canvas.getContext("2d", { alpha: true });
+		if (!ctx) return;
+
+		const dpr = Math.min(window.devicePixelRatio || 1, CONFIG.maxDpr);
+		const { resize, debouncedResize, clearPending } = makeResizeHandler(canvas, ctx, dpr);
+		resize();
+
+		window.addEventListener("resize", debouncedResize);
+		window.addEventListener("mousemove", trackMouse, { passive: true });
+		window.addEventListener("touchstart", trackTouch, { passive: true });
+		window.addEventListener("touchmove", trackTouch, { passive: true });
+
+		const loop = makeDrawLoop(ctx);
+		loop.start();
 
 		return () => {
-			cancelAnimationFrame(rafId);
-			clearTimeout(resizeTimeout);
-			window.removeEventListener('resize', handleResize);
-			window.removeEventListener('mousemove', handleMouseMove);
-			window.removeEventListener('touchstart', handleTouch);
-			window.removeEventListener('touchmove', handleTouch);
+			loop.stop();
+			clearPending();
+			window.removeEventListener("resize", debouncedResize);
+			window.removeEventListener("mousemove", trackMouse);
+			window.removeEventListener("touchstart", trackTouch);
+			window.removeEventListener("touchmove", trackTouch);
 		};
 	});
 </script>
@@ -163,6 +197,6 @@
 		height: 100vh;
 		z-index: -1;
 		pointer-events: none;
-		background-color: #262626;
+		background-color: var(--global-bg);
 	}
 </style>
