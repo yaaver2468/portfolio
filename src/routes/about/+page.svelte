@@ -1,6 +1,7 @@
 <script lang="ts">
 	import SkillCard from "$lib/components/SkillCard.svelte";
 	import headshot from "$lib/assets/headshot.jpg";
+	import { onMount } from "svelte";
 
 	interface SkillGroup {
 		category: string;
@@ -9,18 +10,54 @@
 
 	const skills: SkillGroup[] = [
 		{
+			category: "Languages",
+			skills: "C#, Go, Java, JavaScript, Kotlin, PHP, Python, Ruby, Rust, Scala, SQL, T-SQL, TypeScript",
+		},
+		{
 			category: "Frontend",
-			skills: "Svelte, TypeScript, CSS, HTML"
+			skills: "Angular, Bootstrap, CSS, HTML, Next.js, React, SCSS, Shopify Liquid, Svelte, Tailwind CSS, Vue",
 		},
 		{
-			category: "Backend",
-			skills: "Node.js, Rust, Python, SQL"
+			category: "Backend & APIs",
+			skills: "API, GraphQL, Node.js, Rails",
 		},
 		{
-			category: "Cloud & Tools",
-			skills: "AWS, Vite, Swag"
-		}
+			category: "Databases",
+			skills: "MongoDB, MySQL, PostgreSQL, Redis, SQLite",
+		},
+		{
+			category: "Cloud & DevOps",
+			skills: "AWS, Docker, Firebase, Git",
+		},
+		{
+			category: "Design & Build Tools",
+			skills: "Figma, Vite",
+		},
 	];
+
+	let numColumns = $state(
+		window.matchMedia("(min-width: 768px)").matches ? 3 : 1,
+	);
+
+	onMount(() => {
+		const mql = window.matchMedia("(min-width: 768px)");
+		const updateColumns = () => {
+			numColumns = mql.matches ? 3 : 1;
+		};
+		mql.addEventListener("change", updateColumns);
+		return () => mql.removeEventListener("change", updateColumns);
+	});
+
+	let columns = $derived.by(() => {
+		const cols: SkillGroup[][] = Array.from(
+			{ length: numColumns },
+			() => [],
+		);
+		skills.forEach((group, i) => {
+			cols[i % numColumns].push(group);
+		});
+		return cols;
+	});
 </script>
 
 <div class="about-container">
@@ -31,12 +68,17 @@
 
 		<section class="about-text">
 			<p>
-				My name is Yaaver Imran and I'm a versatile computer science programmer with experience in various programming languages! Thank you for viewing my Portfolio, this site was created with React + Tailwind and hosted on AWS.
-				<br/><br/>
-				I'm dedicated to creating innovative solutions that solve real-world problems. With experience spanning web applications, infrastructure automation, and system optimization, I thrive on tackling complex technical challenges and delivering measurable results. I maintain a commitment to continuous learning through personal projects, industry collaboration, and staying current with emerging technologies and best practices.
-				What drives me is the intersection of technical excellence and user experience; whether I'm optimizing database queries for performance gains, architecting scalable infrastructure, or crafting intuitive interfaces. I believe in the power of clean code, thoughtful design, and collaborative problem-solving to create solutions that truly make a difference.
-				<br/>
-				When I'm not coding, you'll find me exploring new frameworks, contributing to open-source projects, or mentoring fellow developers. I'm always eager to connect with like-minded professionals and explore opportunities where I can contribute my skills while continuing to grow as a developer.
+				I'm a full-stack developer who builds web applications and handles the infrastructure behind them.
+				I'm always looking to take on new challenges and learn something new.
+				<br />
+				Across fullstack engineering and project management roles, I've modernized
+				legacy platforms, optimized high-concurrency database workloads,
+				and delivered end-to-end infrastructure and application deployments.
+				My experience spans logistics SaaS, live event ticketing, e-commerce,
+				and custom software development.
+				<br />
+				I hold an Honours BSc in Computer Science, combining strong software
+				engineering fundamentals with hands-on experience across the modern technology stacks outlined below.
 			</p>
 		</section>
 	</div>
@@ -48,9 +90,13 @@
 
 <h1 class="page-title">Skills</h1>
 
-<div class="skill-grid">
-	{#each skills as group}
-		<SkillCard {group} />
+<div class="skill-columns">
+	{#each columns as column}
+		<div class="skill-column">
+			{#each column as group}
+				<SkillCard {group} />
+			{/each}
+		</div>
 	{/each}
 </div>
 
@@ -94,10 +140,17 @@
 		margin-bottom: 1.5rem;
 	}
 
-	.skill-grid {
-		display: grid;
+	.skill-columns {
+		display: flex;
 		gap: 2rem;
-		grid-template-columns: 1fr;
+	}
+
+	.skill-column {
+		flex: 1 1 0;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
 	}
 
 	@media (min-width: 768px) {
@@ -109,10 +162,6 @@
 
 		.about-image img {
 			max-height: 256px;
-		}
-
-		.skill-grid {
-			grid-template-columns: repeat(3, 1fr);
 		}
 	}
 </style>

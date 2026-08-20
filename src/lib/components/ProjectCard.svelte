@@ -17,11 +17,13 @@
 	const DESCRIPTION_LIMIT = 40;
 	let expanded = $state(false);
 
-	let isLongDescription = $derived(project.description.length > DESCRIPTION_LIMIT);
+	let isLongDescription = $derived(
+		project.description.length > DESCRIPTION_LIMIT,
+	);
 	let displayedDescription = $derived(
 		expanded || !isLongDescription
 			? project.description.replaceAll("\n", "<br/>")
-			: project.description.slice(0, DESCRIPTION_LIMIT).trimEnd() + "…"
+			: project.description.slice(0, DESCRIPTION_LIMIT).trimEnd() + "…",
 	);
 
 	function toggleExpanded(e: MouseEvent) {
@@ -31,9 +33,14 @@
 	}
 </script>
 
-<div class="project-card" class:no-link={!project.link}>
+<div class="card" class:no-link={!project.link} class:has-link={project.link}>
 	{#if project.link}
-		<a href={project.link} title="Checkout this project" class="card-link" target="_blank"></a>
+		<a
+			href={project.link}
+			title="Checkout this project"
+			class="card-link"
+			target="_blank"
+		></a>
 	{/if}
 	<div class="header">
 		<h2 class="title">{project.title}</h2>
@@ -42,14 +49,16 @@
 	<div class="image-container">
 		<img src={project.image} alt={project.title} />
 	</div>
-	<div class="content">
+	<div class="card-content">
 		<section class="description">
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<p
 				class:clickable={isLongDescription}
 				onclick={isLongDescription ? toggleExpanded : undefined}
-			>{@html displayedDescription}</p>
+			>
+				{@html displayedDescription}
+			</p>
 			{#if isLongDescription}
 				<button
 					type="button"
@@ -63,10 +72,10 @@
 				</button>
 			{/if}
 		</section>
-		<section class="languages-container">
+		<section class="card-tags">
 			{#each project.languages.split(",") as lang}
 				{@const langName = lang.trim()}
-				{@const dotColor = colorDict[langName] || "var(--global-white)"}
+				{@const dotColor = colorDict[langName.toLowerCase()] || "var(--global-white)"}
 				<div class="blip-tag" style="--dot-color: {dotColor}">
 					<span class="dot"></span>
 					<span class="lang-text">{langName}</span>
@@ -77,20 +86,8 @@
 </div>
 
 <style>
-	.project-card {
-		display: flex;
-		flex-direction: column;
-		background-color: rgba(58, 58, 58, 0.6);
-		border-radius: 0.75rem;
-		overflow: hidden;
-		position: relative;
-		transition: transform 0.2s ease-in-out;
-		box-shadow: 0 6px 12px -4px color-mix(in srgb, var(--global-white) 20%, transparent);
-		z-index: 1;
-	}
-
-	.project-card:hover {
-		transform: translateY(-0.5rem);
+	.has-link {
+		outline: 1px solid var(--global-white);
 	}
 
 	.no-link {
@@ -118,6 +115,7 @@
 		font-size: 1.25rem;
 		font-weight: bold;
 	}
+
 	.date {
 		font-size: 0.875rem;
 		color: color-mix(in srgb, var(--global-white) 60%, transparent);
@@ -134,13 +132,6 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-	}
-
-	.content {
-		padding: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
 	}
 
 	.description {
@@ -185,10 +176,7 @@
 		}
 	}
 
-	.languages-container {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
+	.card-tags {
 		z-index: 2;
 	}
 </style>

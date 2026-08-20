@@ -8,7 +8,7 @@
 		lifetimeFrames: 5, // line fades out over this many "frames" worth of time
 		burstMin: 2,
 		burstMax: 4,
-		maxLines: 10, // hard cap on simultaneous lines
+		maxLines: 7, // hard cap on simultaneous lines
 		endpointOffsetMin: 10, // how far the line's tip sits from the pointer, min/max px
 		endpointOffsetMax: 50,
 		strokeStyle: "rgba(255, 255, 255, 0.2)",

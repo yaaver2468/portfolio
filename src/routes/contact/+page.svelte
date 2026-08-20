@@ -1,13 +1,26 @@
 <script lang="ts">
+	const SUBTEXT_TIMEOUT = 1500;
+
 	let email = "admin[at]yaaverimran[dot]com";
+	let timeoutTrack = -1;
+	let subtext = $state("click to copy");
 
 	async function copyToClipboard() {
 		try {
 			const realEmail = "admin@yaaverimran.com";
 			await navigator.clipboard.writeText(realEmail);
+			subtext = "copied to clipboard!";
 		} catch (err) {
 			console.error("Failed to copy: ", err);
+			subtext = "failed to copy";
 		}
+		if (timeoutTrack != -1) {
+			clearTimeout(timeoutTrack);
+		}
+		timeoutTrack = setTimeout(() => {
+			subtext = "click to copy";
+			timeoutTrack = -1;
+		}, SUBTEXT_TIMEOUT);
 	}
 </script>
 
@@ -15,7 +28,7 @@
 	<button class="email-text" onclick={copyToClipboard}>
 		{email}
 	</button>
-	<p class="subtext">click to copy</p>
+	<p class="subtext">{subtext}</p>
 </div>
 
 <style>

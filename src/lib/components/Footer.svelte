@@ -63,10 +63,10 @@
 
 	.footer-info {
 		position: absolute;
-		right: 0;
-		bottom: 36px;
+		left: 0;
+		bottom: 0px;
 		font-size: 0.75rem;
-		text-align: right;
+		text-align: left;
 		color: color-mix(in srgb, var(--global-white) 70%, transparent);
 	}
 

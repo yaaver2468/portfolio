@@ -1,42 +1,60 @@
-# sv
+# Portfolio Website
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A fast, responsive personal portfolio built with **SvelteKit**, **Svelte 5**, **TypeScript**, and **Vite**.
 
-## Creating a project
+---
 
-If you're seeing this, you've probably already done this step. Congrats!
+## 🛠️ Tech Stack
 
-```sh
-# create a new project
-npx sv create my-app
-```
+* **Framework:** [SvelteKit](https://svelte.dev/docs/kit/introduction) (Svelte 5)
+* **Language:** TypeScript
+* **Build Tool:** [Vite](https://vite.dev/)
+* **Plugins:** `@poppanator/sveltekit-svg` (SVG loading)
+* **Adapter:** `@sveltejs/adapter-static` / `@sveltejs/adapter-auto`
 
-To recreate this project with the same configuration:
+---
 
-```sh
-# recreate this project
-npx sv@0.17.0 create --template minimal --types ts --install npm .
-```
+## 🚀 Getting Started
 
-## Developing
+### Prerequisites
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Ensure you have [Node.js](https://nodejs.org/) installed on your machine.
 
-```sh
-npm run dev
+### Installation
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+1. Clone the repository:
+    ```bash
+    git clone [https://github.com/your-username/portfolio.git](https://github.com/your-username/portfolio.git)
+    cd portfolio
+    ```
 
-## Building
+2. Install dependencies:
+    ```bash
+    npm install
+    ```
 
-To create a production version of your app:
+---
 
-```sh
+## 💻 Development Commands
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Starts the local development server |
+| `npm run build` | Builds the production-ready static site |
+| `npm run preview` | Previews the production build locally |
+| `npm run check` | Runs type checks via `svelte-check` |
+| `npm run check:watch` | Runs type checks in watch mode |
+
+---
+
+## 📦 Deployment
+
+This project uses `@sveltejs/adapter-static` to output static HTML/CSS/JS files:
+
+1. Generate the static site build:
+```bash
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+2. Deploy the generated output in the `build/` folder to your static hosting platform (e.g., GitHub Pages, Vercel, Netlify, or Cloudflare Pages).
